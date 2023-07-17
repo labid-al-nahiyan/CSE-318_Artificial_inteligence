@@ -8,6 +8,8 @@ MancalaBoard::MancalaBoard()
 {
     allocateBoard();
     initialSetValue();
+    additionalMove=0;
+    stone_capture=0;
 }
 
 void MancalaBoard::allocateBoard()
@@ -28,11 +30,11 @@ void MancalaBoard::initialSetValue()
     board[0][0] = 0;
     board[1][0] = 0;
 }
-void MancalaBoard::copyBoard(MancalaBoard temp)
+void MancalaBoard::copyBoard(MancalaBoard *temp)
 {
     for (int i = 0; i < 2; ++i) {
-        for (int j = 1; j <= 6; ++j) {
-            board[i][j] = temp.getBinValue(i,j);
+        for (int j = 0; j <= 6; ++j) {
+            board[i][j] = temp->getBinValue(i,j);
         }
     }
 }
@@ -54,16 +56,31 @@ void MancalaBoard::updateBoard(int row , int col)
 
     setBinValue(row,col,0);
 
+    int j = row;
+
     for(int i = col-1;i>=0;i--){
-            setBinValue(row,i,getBinValue(row,i)+1);
+            setBinValue(j,i,getBinValue(j,i)+1);
             value--;
-            if(value==0)return;
+
+            if(value==0){
+                if(i!=0 && getBinValue(j^1,7-i)!=0){
+                    if(getBinValue(j,i)==1){
+                        int val = getBinValue(j^1,7-i);
+                        stone_capture += val;
+                        setBinValue(j^1,7-i,0);
+                        setBinValue(j,i,0);
+                        setBinValue(j,0,getBinValue(j,0)+val+1);
+                    }
+                }
+                return;
+            }
     }
 
-    int j = row;
+
     while(value>0){
         for(int i = 6;i>0;i--){
             setBinValue(j^1,i,getBinValue(j^1,i)+1);
+
             value--;
             if(value==0)return;
         }
@@ -71,18 +88,19 @@ void MancalaBoard::updateBoard(int row , int col)
         for(int i=6;i>=0;i--){
             value--;
             setBinValue(j,i,getBinValue(j,i)+1);
+            if(value==0){
 
-            if(i!=0){
-
-                if(value==0){
+                if(i!=0 && getBinValue(j^1,7-i)!=0){
                     if(getBinValue(j,i)==1){
-                        int val = getBinValue(j^1,i);
-                        setBinValue(j^1,i,0);
+                        int val = getBinValue(j^1,7-i);
+                        stone_capture += val;
+                        setBinValue(j^1,7-i,0);
                         setBinValue(j,i,0);
-                        setBinValue(j,0,val+1);
+                        setBinValue(j,0,getBinValue(j,0)+val+1);
                     }
-                    return;
+
                 }
+                return;
             }
 
         }
@@ -115,28 +133,97 @@ int MancalaBoard::isGameOver()
 
 void MancalaBoard::BoardPrint()
 {
-
-
+        cout<<"___________________________________\n";
+        cout<<"|    |";
         for (int j = 1; j <= 6; ++j) {
             cout<<getBinValue(0,j)<<" | ";
         }
-        cout<<'\n';
+        cout<<"    |\n| "<<getBinValue(0,0)<<"  |----------------------|  "<<getBinValue(1,0)<<"  |\n";
 
-        for (int j = 6; j > 0; j--) {
+        cout<<"|    |";
+        for (int j = 6; j >= 1; j--) {
             cout<<getBinValue(1,j)<<" | ";
         }
-        cout<<"\n\n";
+        cout<<"    |\n";
 
+        cout<<"------------------------------------\n";
 
 }
 
-int MancalaBoard::Heuristic()
+int MancalaBoard::Heuristic0(int playerNo)
 {
-    return  heuristicValue=getBinValue(0,0)-getBinValue(1,0);
+    return  getBinValue(playerNo,0)-getBinValue(playerNo^1,0);
 }
+
+int MancalaBoard::Heuristic1(int playerNo)
+{
+    int value = getBinValue(playerNo,0)-getBinValue(playerNo^1,0);
+    value*=2;
+
+    int value1=0;
+    for(int i =1;i<=6;i++){
+        value1 += getBinValue(playerNo,i)-getBinValue(playerNo^1,i);
+    }
+
+    value1*=3;
+
+    setHeuristicValue(value1+value);
+    return getHeuristicValue();
+}
+
+int MancalaBoard::Heuristic2(int playerNo)
+{
+    int value = heuristicValue=getBinValue(playerNo,0)-getBinValue(playerNo^1,0);
+    value*=2;
+
+    int value1=0;
+    for(int i =1;i<=6;i++){
+        value1 += getBinValue(playerNo,i)-getBinValue(playerNo^1,i);
+    }
+    value1*=3;
+
+    setHeuristicValue(value1+value+additionalMove);
+
+    return getHeuristicValue();
+}
+
+int MancalaBoard::Heuristic3(int playerNo)
+{
+    int value = heuristicValue=getBinValue(playerNo,0)-getBinValue(playerNo^1,0);
+
+
+    int value1=0;
+    for(int i =1;i<=6;i++){
+        value1 += getBinValue(playerNo,i)-getBinValue(playerNo^1,i);
+    }
+    value*=5;
+    value1*=3;
+
+    setHeuristicValue(value1+value+5*additionalMove+(rand()%5+1)*stone_capture);
+
+    return getHeuristicValue();
+}
+
 int MancalaBoard::getHeuristicValue()
 {
     return heuristicValue;
+
+}
+void MancalaBoard::setHeuristicValue(int value)
+{
+
+    heuristicValue = value;
+}
+
+void MancalaBoard::winner()
+{
+    player0_pt = getBinValue(0,0); player1_pt = getBinValue(1,0);
+
+    for(int i =1;i<=6;i++){
+        player0_pt += getBinValue(0,i);
+        player1_pt += getBinValue(1,i);
+    }
+
 
 }
 
